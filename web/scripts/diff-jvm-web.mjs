@@ -2,7 +2,7 @@
 // Differential test: runs the same commands through the JVM build and the browser build, then
 // compares every automaton and result file they produce. Timing lines in logs are ignored.
 // Usage: node web/scripts/diff-jvm-web.mjs [command-file ...]   (defaults to the integration corpus)
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, readdirSync, readFileSync, writeFileSync, cpSync, existsSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,12 +33,20 @@ for (const d of ['Result', 'Session']) mkdirSync(join(jvmHome, d), { recursive: 
 const script = commands.join('\n') + '\nexit;\n';
 const jar = join(root, 'target', 'Walnut-all.jar');
 const t0 = Date.now();
-execFileSync('java', ['-jar', jar, `--home-dir=${jvmHome}/`, '--global-session'], { input: script, stdio: ['pipe', 'ignore', 'inherit'], maxBuffer: 1 << 28 });
+// Some corpus files reference automata that a later file defines, so a few commands fail in both
+// builds. Their output is captured (not shown) and the failure counts are compared below.
+const jvm = spawnSync('java', ['-jar', jar, `--home-dir=${jvmHome}/`, '--global-session'],
+  { input: script, maxBuffer: 1 << 28, encoding: 'utf8' });
+if (jvm.status !== 0) { console.log(jvm.stderr); throw new Error(`JVM run failed with status ${jvm.status}`); }
+const jvmOutput = jvm.stdout + jvm.stderr;
 console.log(`JVM run: ${Date.now() - t0} ms`);
+const FAILURE = /Exception|does not exist|Undefined token|operator is missing|expected/i;
+const countFailures = (text) => text.split('\n').filter((l) => FAILURE.test(l)).length;
 
 // ---- web ---------------------------------------------------------------------------------------
 const W = await import(join(root, 'web', 'app', 'target', 'site', 'walnut.js'));
-W.setOutput(() => {});
+let webOutput = '';
+W.setOutput((text) => { webOutput += text; });
 const HOME = W.home();
 function seed(dir, rel = '') {
   for (const name of readdirSync(dir)) {
@@ -52,6 +60,16 @@ W.init();
 const t1 = Date.now();
 for (const c of commands) W.run(c);
 console.log(`Web run: ${Date.now() - t1} ms`);
+const jvmFailures = countFailures(jvmOutput);
+const webFailures = countFailures(webOutput);
+console.log(`Failing command lines: JVM ${jvmFailures}, web ${webFailures}`);
+if (jvmFailures !== webFailures) {
+  const lines = (text) => text.split('\n').filter((l) => FAILURE.test(l)).join('\n');
+  writeFileSync(join(work, 'failures.jvm'), lines(jvmOutput));
+  writeFileSync(join(work, 'failures.web'), lines(webOutput));
+  console.log(`Failure counts differ between builds (see ${join(work, 'failures.jvm')} and .web).`);
+  process.exitCode = 1;
+}
 
 // ---- compare -----------------------------------------------------------------------------------
 const IGNORE = /(\d+ms|Total computation time.*|Applying valid representation.*)/g;
@@ -81,4 +99,4 @@ for (const d of ['Result', 'Automata Library', 'Word Automata Library', 'Custom 
   if (existsSync(join(jvmHome, d))) walk(join(jvmHome, d), `${d}/`);
 }
 console.log(`${compared} files compared, ${mismatches} mismatches${mismatches ? ` (see ${join(work, 'diff')})` : ''}`);
-process.exit(mismatches ? 1 : 0);
+if (mismatches) process.exitCode = 1;
