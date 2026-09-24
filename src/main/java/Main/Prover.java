@@ -19,8 +19,6 @@
 package Main;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -653,7 +651,7 @@ public class Prover {
     String morphismAddress =
         Session.getReadFileForMorphismLibrary(m.group(GROUP_PROMOTE_MORPHISM) + TXT_EXTENSION);
     String mapString =
-        Files.readString(Paths.get(UtilityMethods.validateFile(morphismAddress).toURI()));
+        UtilityMethods.readFromFile(UtilityMethods.validateFile(morphismAddress).getPath());
 
     Morphism h = new Morphism(mapString);
     Automaton P = h.toWordAutomaton();

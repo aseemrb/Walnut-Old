@@ -70,7 +70,9 @@ public class Predicate {
 
     // Alphanumeric, but not starting with reserved letters A,E,I
     private static final String ALPHANUMERIC = "([a-zA-Z&&[^AEI]]\\w*)";
-    private static final String ANCHOR = "\\G";
+    // Patterns are matched with matchAt(), which anchors them at a given index. This replaces the
+    // \G anchor, which some regex engines (including the one used by the browser build) lack.
+    private static final String ANCHOR = "";
     private static final String WHITESPACE = "\\s*";
     private static final String LEFT_PAREN = "\\(";
     private static final String RIGHT_PAREN = "\\)";
@@ -111,6 +113,15 @@ public class Predicate {
 
     public Predicate(String predicate) {
         this(MSD_2, predicate, 0);
+    }
+
+    /**
+     * Anchored match: true iff the matcher's pattern matches starting exactly at index. Equivalent to
+     * find(index) on a \G-prefixed pattern, with start()/end() reporting absolute positions.
+     */
+    public static boolean matchAt(Matcher m, int index) {
+        m.reset();
+        return m.region(index, m.regionEnd()).lookingAt();
     }
 
     private void initializeMatchers() {
@@ -154,12 +165,12 @@ public class Predicate {
         Operator op;
         boolean lastTokenWasOperator = true;
         while (index < predicate.length()) {
-            if (MATCHER_FOR_LOGICAL_OPERATORS.find(index)) {
+            if (matchAt(MATCHER_FOR_LOGICAL_OPERATORS, index)) {
                 lastTokenWasOperator = true;
                 Matcher matcher = MATCHER_FOR_LOGICAL_OPERATORS;
                 final String opStr = matcher.group(1);
                 if (opStr.equals(Operator.EXISTS) || opStr.equals(Operator.FORALL) || opStr.equals(Operator.INFINITE)) {
-                    if (!MATCHER_FOR_LIST_OF_QUANTIFIED_VARIABLES.find(matcher.end())) {
+                    if (!matchAt(MATCHER_FOR_LIST_OF_QUANTIFIED_VARIABLES, matcher.end())) {
                         throw new WalnutException(
                                 "Operator " + opStr + " requires a list of variables: char at " +
                                         (realStartingPosition + index));
@@ -172,70 +183,70 @@ public class Predicate {
                     op.put(postOrder, operatorStack);
                     index = matcher.end();
                 }
-            } else if (MATCHER_FOR_RELATIONAL_OPERATORS.find(index)) {
+            } else if (matchAt(MATCHER_FOR_RELATIONAL_OPERATORS, index)) {
                 lastTokenWasOperator = true;
                 Matcher matcher = MATCHER_FOR_RELATIONAL_OPERATORS;
                 NumberSystem ns = NumberSystem.getComputeIfAbsent(currentNumberSystem);
                 op = new RelationalOperator(realStartingPosition + matcher.start(1), matcher.group(1), ns);
                 op.put(postOrder, operatorStack);
                 index = matcher.end();
-            } else if (MATCHER_FOR_ARITHMETIC_OPERATORS.find(index)) {
+            } else if (matchAt(MATCHER_FOR_ARITHMETIC_OPERATORS, index)) {
                 lastTokenWasOperator = true;
                 Matcher matcher = MATCHER_FOR_ARITHMETIC_OPERATORS;
                 NumberSystem ns = NumberSystem.getComputeIfAbsent(currentNumberSystem);
                 op = new ArithmeticOperator(realStartingPosition + matcher.start(1), matcher.group(1), ns);
                 op.put(postOrder, operatorStack);
                 index = matcher.end();
-            } else if (MATCHER_FOR_WORD.find(index)) {
+            } else if (matchAt(MATCHER_FOR_WORD, index)) {
                 if (!lastTokenWasOperator) throw WalnutException.operatorMissing(realStartingPosition + index);
                 lastTokenWasOperator = false;
                 index = putWord(currentNumberSystem, false);
-            } else if (MATCHER_FOR_WORD_WITH_DELIMITER.find(index)) {
+            } else if (matchAt(MATCHER_FOR_WORD_WITH_DELIMITER, index)) {
                 if (!lastTokenWasOperator) throw WalnutException.operatorMissing(realStartingPosition + index);
                 lastTokenWasOperator = false;
                 index = putWord(currentNumberSystem, true);
-            } else if (MATCHER_FOR_FUNCTION.find(index)) {
+            } else if (matchAt(MATCHER_FOR_FUNCTION, index)) {
                 if (!lastTokenWasOperator) throw WalnutException.operatorMissing(realStartingPosition + index);
                 lastTokenWasOperator = false;
                 index = putFunction(currentNumberSystem);
-            } else if (MATCHER_FOR_MACRO.find(index)) {
+            } else if (matchAt(MATCHER_FOR_MACRO, index)) {
                 if (!lastTokenWasOperator) throw WalnutException.operatorMissing(realStartingPosition + index);
                 index = putMacro();
-            } else if (MATCHER_FOR_VARIABLE.find(index)) {
+            } else if (matchAt(MATCHER_FOR_VARIABLE, index)) {
                 if (!lastTokenWasOperator) throw WalnutException.operatorMissing(realStartingPosition + index);
                 lastTokenWasOperator = false;
                 t = new Variable(realStartingPosition + MATCHER_FOR_VARIABLE.start(1), MATCHER_FOR_VARIABLE.group(1));
                 t.put(postOrder);
                 index = MATCHER_FOR_VARIABLE.end();
-            } else if (MATCHER_FOR_NUMBER_LITERAL.find(index)) {
+            } else if (matchAt(MATCHER_FOR_NUMBER_LITERAL, index)) {
                 if (!lastTokenWasOperator) throw WalnutException.operatorMissing(realStartingPosition + index);
                 lastTokenWasOperator = false;
                 NumberSystem ns = NumberSystem.getComputeIfAbsent(currentNumberSystem);
                 t = new NumberLiteral(realStartingPosition + MATCHER_FOR_NUMBER_LITERAL.start(1), UtilityMethods.parseBigInteger(MATCHER_FOR_NUMBER_LITERAL.group(1)), ns);
                 t.put(postOrder);
                 index = MATCHER_FOR_NUMBER_LITERAL.end();
-            } else if (MATCHER_FOR_ALPHABET_LETTER.find(index)) {
+            } else if (matchAt(MATCHER_FOR_ALPHABET_LETTER, index)) {
                 if (!lastTokenWasOperator) throw WalnutException.operatorMissing(realStartingPosition + index);
                 lastTokenWasOperator = false;
                 t = new AlphabetLetter(realStartingPosition + MATCHER_FOR_ALPHABET_LETTER.start(1), UtilityMethods.parseInt(MATCHER_FOR_ALPHABET_LETTER.group(1)));
                 t.put(postOrder);
                 index = MATCHER_FOR_ALPHABET_LETTER.end();
-            } else if (MATCHER_FOR_NUMBER_SYSTEM.find(index)) {
+            } else if (matchAt(MATCHER_FOR_NUMBER_SYSTEM, index)) {
                 String tmp = NumberSystem.normalizeNumberSystemToken(MATCHER_FOR_NUMBER_SYSTEM.group(R_NUMBER_SYSTEM_TOKEN));
                 numberSystems.push(tmp);
                 currentNumberSystem = tmp;
                 index = MATCHER_FOR_NUMBER_SYSTEM.end();
-            } else if (MATCHER_FOR_LEFT_PARENTHESIS.find(index)) {
+            } else if (matchAt(MATCHER_FOR_LEFT_PARENTHESIS, index)) {
                 op = new LeftParenthesis(realStartingPosition + index);
                 op.put(postOrder, operatorStack);
                 numberSystems.push("(");
                 index = MATCHER_FOR_LEFT_PARENTHESIS.end();
-            } else if (MATCHER_FOR_RIGHT_PARENTHESIS.find(index)) {
+            } else if (matchAt(MATCHER_FOR_RIGHT_PARENTHESIS, index)) {
                 op = new RightParenthesis(realStartingPosition + index);
                 op.put(postOrder, operatorStack);
                 currentNumberSystem = findCurrentNumberSystem(numberSystems);
                 index = MATCHER_FOR_RIGHT_PARENTHESIS.end();
-            } else if (MATCHER_FOR_WHITESPACE.find(index)) {
+            } else if (matchAt(MATCHER_FOR_WHITESPACE, index)) {
                 index = MATCHER_FOR_WHITESPACE.end();
             } else {
                 throw WalnutException.undefinedToken(realStartingPosition + index);
@@ -309,7 +320,7 @@ public class Predicate {
                 if (bracketStack.isEmpty()) {
                     indices.add(new Predicate(defaultNumberSystem, buf.toString(), realStartingPosition + startingPosition));
                     buf = new StringBuilder();
-                    if (m_leftBracket.find(i + 1)) {
+                    if (matchAt(m_leftBracket, i + 1)) {
                         bracketStack.push('[');
                         i = m_leftBracket.end();
                         startingPosition = i;

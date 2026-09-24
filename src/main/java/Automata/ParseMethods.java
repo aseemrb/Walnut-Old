@@ -18,6 +18,8 @@
 
 package Automata;
 
+import Main.Predicate;
+
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -43,9 +45,9 @@ public class ParseMethods {
     static final Pattern PATTERN_FOR_TRUE_FALSE = Pattern.compile("^\\s*(true|false)\\s*$");
 
     static final Pattern PATTERN_NEXT_ALPHABET_TOKEN = Pattern.compile(
-        "\\G\\s*((((msd|lsd)_(\\d+|\\w+))|((msd|lsd)(\\d+|\\w+))|(msd|lsd)|(\\d+|\\w+))|(\\{\\s*((\\+|\\-)?\\s*\\d+\\s*(\\s*,\\s*(\\+|\\-)?\\s*\\d+)*)\\s*\\}))\\s*");
+        "\\s*((((msd|lsd)_(\\d+|\\w+))|((msd|lsd)(\\d+|\\w+))|(msd|lsd)|(\\d+|\\w+))|(\\{\\s*((\\+|\\-)?\\s*\\d+\\s*(\\s*,\\s*(\\+|\\-)?\\s*\\d+)*)\\s*\\}))\\s*");
 
-    static final Pattern PATTERN_ELEMENT = Pattern.compile("\\G\\s*,?\\s*(((\\+|\\-)?\\s*\\d+)|\\*)");
+    static final Pattern PATTERN_ELEMENT = Pattern.compile("\\s*,?\\s*(((\\+|\\-)?\\s*\\d+)|\\*)");
 
     static final Pattern PATTERN_FOR_STATE_DECLARATION = Pattern.compile("^\\s*(\\d+)\\s+((\\+|\\-)?\\s*\\d+)\\s*$");
 
@@ -87,7 +89,7 @@ public class ParseMethods {
             List<NumberSystem> bases) {
         Matcher m = PATTERN_NEXT_ALPHABET_TOKEN.matcher(s);
         int index = 0;
-        while (m.find(index)) {
+        while (Predicate.matchAt(m, index)) {
             if (m.group(ALPHABET_SET) != null) {
                 List<Integer> list = new ArrayList<>();
                 parseList(m.group(ALPHABET_SET), list);
@@ -155,7 +157,7 @@ public class ParseMethods {
     public static void parseList(String s, List<Integer> list) {
         int index = 0;
         Matcher m = PATTERN_ELEMENT.matcher(s);
-        while (m.find(index)) {
+        while (Predicate.matchAt(m, index)) {
             String group1 = m.group(1);
             if (group1.equals("*")) list.add(null);
             else list.add(UtilityMethods.parseInt(group1));

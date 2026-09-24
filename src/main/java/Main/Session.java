@@ -43,7 +43,7 @@ public class Session {
   private static String sessionWalnutDir;
   static boolean globalSession = false;
 
-  static final String WALNUT_VERSION = "8.0-alpha";
+  public static final String WALNUT_VERSION = "8.0-alpha";
   static final String PROMPT = "\n[Walnut]$ ";
   private static final String FRIENDLY_DATE_TIME_PATTERN = "yyyy_MM_dd_HH_mm_ss"; // TODO; what about localization?
 

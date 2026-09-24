@@ -23,6 +23,8 @@ import Main.WalnutException;
 import it.unimi.dsi.fastutil.ints.*;
 
 import java.io.IOException;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -60,7 +62,7 @@ public class Morphism {
     }
 
     public void write(String address) throws IOException {
-        try (PrintWriter out = new PrintWriter(address, StandardCharsets.UTF_8)) {
+        try (PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(address), StandardCharsets.UTF_8))) {
             for (Map.Entry<Integer, IntList> entry : mapping.entrySet()) {
                 out.write(escapedInt(entry.getKey())+ " -> ");
                 for (Integer y : entry.getValue()) {

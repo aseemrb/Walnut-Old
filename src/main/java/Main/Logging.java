@@ -1,13 +1,5 @@
 package Main;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.FileAppender;
-import org.slf4j.ILoggerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -55,15 +47,11 @@ public class Logging {
   public static final String MINIMIZED = "Minimized";
   public static final String MINIMIZING = "Minimizing";
 
-  private static final String CONSOLE_LOGGER_NAME = "Walnut.Console";
-  private static final String COMMAND_LOGGER_NAME = "Walnut.CommandLog";
-  private static final String DETAILED_LOGGER_NAME = "Walnut.DetailedLog";
-
   public static final String GLOBAL_LOG_FILENAME = "global_log.txt";
 
-  private static final Logger consoleLogger = LoggerFactory.getLogger(CONSOLE_LOGGER_NAME);
-  private static final Logger commandLogger = LoggerFactory.getLogger(COMMAND_LOGGER_NAME);
-  private static final Logger detailedLogger = LoggerFactory.getLogger(DETAILED_LOGGER_NAME);
+  // Per-command log files. These are only open while a CommandLogContext is active.
+  private static BufferedWriter commandFileWriter;
+  private static BufferedWriter detailedFileWriter;
 
   private static BufferedWriter globalLogWriter;
   private static boolean globalLogHasContent = false;
@@ -151,8 +139,8 @@ public class Logging {
 
   public static CommandLogContext writeEvalLogsTo(String resultName) {
     return new CommandLogContext(
-        addFileAppender(COMMAND_LOGGER_NAME, resultName + "_log.txt"),
-        printDetails ? addFileAppender(DETAILED_LOGGER_NAME, resultName + "_detailed_log.txt") : null,
+        openLogFile(resultName + "_log.txt"),
+        printDetails ? openLogFile(resultName + "_detailed_log.txt") : null,
         evalLogFilesActive);
   }
 
@@ -196,16 +184,16 @@ public class Logging {
   public static void logEvaluationStep(String msg, boolean finalLine) {
     String msgWithIndent = " ".repeat(indentCount) + msg;
     append(commandLog, msgWithIndent, finalLine);
-    commandLogger.info(msgWithIndent);
+    writeLine(commandFileWriter, msgWithIndent);
     writeGlobalLogLine(msgWithIndent);
 
     if (printDetails) {
       append(detailedLog, msgWithIndent, finalLine);
-      detailedLogger.info(msgWithIndent);
+      writeLine(detailedFileWriter, msgWithIndent);
     }
 
     if (shouldPrintStepsOrDetails()) {
-      consoleLogger.info(msgWithIndent);
+      System.out.println(msgWithIndent);
     }
   }
 
@@ -215,16 +203,16 @@ public class Logging {
 
     if (printDetails) {
       appendLine(detailedLog, msgWithIndent);
-      detailedLogger.info(msgWithIndent);
+      writeLine(detailedFileWriter, msgWithIndent);
     }
 
     if (!evalLogFilesActive) {
       appendLine(commandLog, msgWithIndent);
-      commandLogger.info(msgWithIndent);
+      writeLine(commandFileWriter, msgWithIndent);
     }
 
     if (printEnabled && print) {
-      consoleLogger.info(msgWithIndent);
+      System.out.println(msgWithIndent);
     }
   }
 
@@ -256,47 +244,56 @@ public class Logging {
     }
   }
 
-  private static FileLogAppender addFileAppender(String loggerName, String filename) {
-    ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
-    if (!(loggerFactory instanceof LoggerContext loggerContext)) {
+  private static BufferedWriter openLogFile(String filename) {
+    try {
+      return Files.newBufferedWriter(
+          Path.of(filename), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+          StandardOpenOption.WRITE);
+    } catch (IOException e) {
+      System.out.println("Could not create log file " + filename);
       return null;
     }
+  }
 
-    PatternLayoutEncoder encoder = new PatternLayoutEncoder();
-    encoder.setContext(loggerContext);
-    encoder.setPattern("%msg%n");
-    encoder.start();
+  private static void writeLine(BufferedWriter writer, String msg) {
+    if (writer == null) {
+      return;
+    }
+    try {
+      writer.write(msg);
+      writer.newLine();
+      writer.flush();
+    } catch (IOException ignored) {
+      // Do not let logging failures interfere with Walnut commands.
+    }
+  }
 
-    FileAppender<ILoggingEvent> appender = new FileAppender<>();
-    appender.setContext(loggerContext);
-    appender.setName(loggerName + "." + Integer.toHexString(filename.hashCode()) + "." + System.nanoTime());
-    appender.setFile(filename);
-    appender.setAppend(false);
-    appender.setImmediateFlush(true);
-    appender.setEncoder(encoder);
-    appender.start();
-
-    ch.qos.logback.classic.Logger logger = loggerContext.getLogger(loggerName);
-    logger.setAdditive(false);
-    logger.setLevel(Level.INFO);
-    logger.addAppender(appender);
-
-    return new FileLogAppender(logger, appender, encoder);
+  private static void closeQuietly(BufferedWriter writer) {
+    if (writer == null) {
+      return;
+    }
+    try {
+      writer.close();
+    } catch (IOException ignored) {
+      // Nothing useful to do here.
+    }
   }
 
   public static final class CommandLogContext implements AutoCloseable {
-    private final FileLogAppender commandAppender;
-    private final FileLogAppender detailedAppender;
+    private final BufferedWriter previousCommandWriter;
+    private final BufferedWriter previousDetailedWriter;
     private final boolean previousEvalLogFilesActive;
     private boolean closed;
 
     private CommandLogContext(
-        FileLogAppender commandAppender,
-        FileLogAppender detailedAppender,
+        BufferedWriter commandWriter,
+        BufferedWriter detailedWriter,
         boolean previousEvalLogFilesActive) {
-      this.commandAppender = commandAppender;
-      this.detailedAppender = detailedAppender;
+      this.previousCommandWriter = commandFileWriter;
+      this.previousDetailedWriter = detailedFileWriter;
       this.previousEvalLogFilesActive = previousEvalLogFilesActive;
+      commandFileWriter = commandWriter;
+      detailedFileWriter = detailedWriter;
       evalLogFilesActive = true;
     }
 
@@ -305,26 +302,14 @@ public class Logging {
       if (closed) {
         return;
       }
-      closeAppender(detailedAppender);
-      closeAppender(commandAppender);
+      closeQuietly(detailedFileWriter);
+      closeQuietly(commandFileWriter);
+      commandFileWriter = previousCommandWriter;
+      detailedFileWriter = previousDetailedWriter;
       evalLogFilesActive = previousEvalLogFilesActive;
       closed = true;
     }
-
-    private void closeAppender(FileLogAppender logAppender) {
-      if (logAppender == null) {
-        return;
-      }
-      logAppender.logger.detachAppender(logAppender.appender);
-      logAppender.appender.stop();
-      logAppender.encoder.stop();
-    }
   }
-
-  private record FileLogAppender(
-      ch.qos.logback.classic.Logger logger,
-      FileAppender<ILoggingEvent> appender,
-      PatternLayoutEncoder encoder) {}
 
   /**
    * Create a truncated stack trace so users don't see a full screen stack dump

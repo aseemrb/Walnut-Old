@@ -43,7 +43,7 @@ public class Reg {
     int inputLength = r.getA().size();
     Matcher m2 = PAT_FOR_AN_ALPHABET_VECTOR.matcher(baseexp);
     // if we haven't had to replace any input vectors with unicode, we use the legacy method of constructing the automaton
-    StringBuilder sb = new StringBuilder();
+    StringBuffer sb = new StringBuffer();
     while (m2.find()) {
       String alphabetVector = m2.group();
 
