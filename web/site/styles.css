@@ -130,7 +130,7 @@ button:disabled { opacity: 0.5; cursor: default; }
   line-height: 1.55;
 }
 .entry { margin: 0 0 14px; white-space: pre-wrap; word-break: break-word; }
-.entry.note { font-family: var(--sans); color: var(--muted); white-space: normal; max-width: 60ch; }
+.entry.note { font-family: var(--sans); color: var(--muted); white-space: normal; }
 .entry.note p { margin: 0 0 6px; }
 .entry .cmd { color: var(--accent); font-weight: 500; }
 .entry .cmd::before { content: "[Walnut]$ "; color: var(--muted); font-weight: 400; }
