@@ -13,3 +13,19 @@ jobs:
           distribution: 'temurin'
       - name: Build
         run: mvn --batch-mode install
+  web:
+    name: "Browser build"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Build site
+        run: web/scripts/build-site.sh
+      - name: Check browser build against the JVM build
+        run: node web/scripts/diff-jvm-web.mjs

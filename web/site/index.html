@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Walnut</title>
+<meta name="description" content="Walnut, the automated theorem prover for automatic sequences, running entirely in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%236E4A26'/%3E%3Cpath d='M16 5c-3 5-3 17 0 22M9 9c4 3 10 3 14 0M9 23c4-3 10-3 14 0' stroke='%23F4F4F2' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Walnut</h1>
+    <p class="tagline">Theorem prover for automatic sequences. Runs in your browser, nothing to install.</p>
+  </div>
+  <div class="top-actions">
+    <span id="status" class="status" data-state="loading">Loading prover</span>
+    <button id="theme" class="ghost theme-toggle" type="button" title="Switch between light and dark" aria-label="Switch theme">
+      <span>Theme</span>
+      <svg class="icon icon-sun" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="icon icon-moon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/></svg>
+    </button>
+    <a class="ghost" href="https://github.com/Walnut-Theorem-Prover/Walnut/wiki" target="_blank" rel="noopener">Manual</a>
+  </div>
+</header>
+
+<main class="workspace">
+  <section class="console" aria-label="Console">
+    <div id="transcript" class="transcript" role="log" aria-live="polite">
+      <div class="entry note">
+        <p>Type a command and press Enter. Commands end with <code>;</code> or, to also print the steps, <code>:</code></p>
+        <p>Try <code>def even "Ek n=2*k";</code> then <code>test even 5;</code> or <code>help;</code> to list commands.</p>
+      </div>
+    </div>
+    <form id="form" class="prompt" autocomplete="off">
+      <label for="input" class="prompt-label">[Walnut]$</label>
+      <textarea id="input" rows="1" spellcheck="false" placeholder='eval thue "Ai T[i] = T[2*i]";' aria-label="Command"></textarea>
+      <button id="run" type="submit">Run</button>
+      <button id="stop" type="button" class="danger" hidden>Stop</button>
+    </form>
+  </section>
+
+  <aside class="files" aria-label="Files">
+    <div class="files-head">
+      <h2>Files</h2>
+      <div class="files-actions">
+        <button id="import" class="ghost small" type="button">Add files</button>
+        <button id="reset" class="ghost small" type="button">Reset</button>
+      </div>
+      <input id="import-input" type="file" multiple hidden>
+    </div>
+    <div id="tree" class="tree"></div>
+    <div id="viewer" class="viewer" hidden>
+      <div class="viewer-head">
+        <button id="viewer-back" class="ghost small" type="button">Back</button>
+        <span id="viewer-name" class="viewer-name"></span>
+        <button id="viewer-download" class="ghost small" type="button">Download</button>
+        <button id="viewer-delete" class="ghost small" type="button">Delete</button>
+      </div>
+      <div id="viewer-graph" class="viewer-graph" hidden></div>
+      <pre id="viewer-text" class="viewer-text"></pre>
+    </div>
+  </aside>
+</main>
+
+<dialog id="confirm">
+  <form method="dialog">
+    <p id="confirm-text"></p>
+    <div class="dialog-actions">
+      <button value="cancel" class="ghost" type="submit">Cancel</button>
+      <button value="ok" class="danger" type="submit" id="confirm-ok">Confirm</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

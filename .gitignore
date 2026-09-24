@@ -45,3 +45,11 @@ scratch/
 
 # Users sessions shouldn't be tracked with git
 Session
+
+# Web build outputs
+web/dist/
+web/site/library.json
+web/*/target/
+
+# Playwright screenshots
+.playwright-mcp/

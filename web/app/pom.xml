@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.github.walnut-theorem-prover</groupId>
+    <artifactId>walnut-web</artifactId>
+    <version>8.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>Walnut Web</name>
+    <description>Browser build of Walnut, compiled from the JVM core with TeaVM.</description>
+
+    <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <teavm.version>0.15.0</teavm.version>
+        <!-- JAVASCRIPT or WEBASSEMBLY_GC -->
+        <teavm.target>JAVASCRIPT</teavm.target>
+    </properties>
+
+    <dependencies>
+        <!-- Must be declared before walnut: TeaVM resolves classes in dependency order. -->
+        <dependency>
+            <groupId>io.github.walnut-theorem-prover</groupId>
+            <artifactId>walnut-web-shims</artifactId>
+            <version>8.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.walnut-theorem-prover</groupId>
+            <artifactId>walnut</artifactId>
+            <version>8.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.teavm</groupId>
+            <artifactId>teavm-classlib</artifactId>
+            <version>${teavm.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.teavm</groupId>
+            <artifactId>teavm-jso-apis</artifactId>
+            <version>${teavm.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.teavm</groupId>
+                <artifactId>teavm-maven-plugin</artifactId>
+                <version>${teavm.version}</version>
+                <executions>
+                    <execution>
+                        <id>web-client</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <targetDirectory>${project.build.directory}/site</targetDirectory>
+                            <mainClass>Main.Web.WalnutWeb</mainClass>
+                            <targetType>${teavm.target}</targetType>
+                            <jsModuleType>ES2015</jsModuleType>
+                            <targetFileName>walnut.js</targetFileName>
+                            <minifying>true</minifying>
+                            <optimizationLevel>ADVANCED</optimizationLevel>
+                            <debugInformationGenerated>false</debugInformationGenerated>
+                            <sourceMapsGenerated>false</sourceMapsGenerated>
+                            <stopOnErrors>true</stopOnErrors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
