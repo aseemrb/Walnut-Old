@@ -72,7 +72,8 @@ function onWorkerMessage(event) {
   switch (msg.type) {
     case 'ready':
       ready = true;
-      setStatus('ready', `Ready, v${msg.version}`);
+      setStatus('ready', 'Ready');
+      $('version').textContent = `v${msg.version}`;
       renderTree(msg.tree);
       if (msg.restored > 0) addNote(`Restored ${msg.restored} saved file${msg.restored === 1 ? '' : 's'} from this browser.`);
       input.focus();
